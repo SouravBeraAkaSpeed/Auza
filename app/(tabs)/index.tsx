@@ -1,52 +1,125 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  SafeAreaView,
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  PermissionsAndroid,
+  Platform,
+  StyleSheet,
+} from 'react-native';
+import BluetoothClassic, { BluetoothDeviceReadEvent, BluetoothEventListener } from 'react-native-bluetooth-classic';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const requestBluetoothPermissions = async () => {
+  if (Platform.OS === 'ios') {
+    return true;
+  }
+  if (Platform.OS === 'android') {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  }
+  return false;
+};
 
-export default function HomeScreen() {
+const HomeScreen = () => {
+  const [message, setMessage] = useState<string>('');
+  const [chatMessages, setChatMessages] = useState<{ sender: string, text: string }[]>([]);
+  const [connectedDevice, setConnectedDevice] = useState<any>(null);
+  const [deviceList, setDeviceList] = useState<any[]>([]);
+
+  useEffect(() => {
+    requestBluetoothPermissions().then((granted) => {
+      if (granted) {
+        scanForDevices();
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      if (connectedDevice) {
+        connectedDevice.disconnect();
+      }
+    };
+  }, []);
+
+  const scanForDevices = async () => {
+    try {
+      const devices = await BluetoothClassic.getBondedDevices();
+      setDeviceList(devices);
+
+      const device = devices.find(d => d.name === 'ESP32Test');
+      if (device) {
+        const deviceInstance = await BluetoothClassic.connectToDevice(device.address);
+        setConnectedDevice(deviceInstance);
+
+        deviceInstance.onDataReceived((data : BluetoothDeviceReadEvent) => {
+          const receivedMessage = data.data;
+          setChatMessages((prevMessages) => [
+            ...prevMessages,
+            { sender: 'ESP32', text: receivedMessage },
+          ]);
+        });
+
+        console.log("Connected to device:", device.name);
+      }
+    } catch (error) {
+      console.error("Scan or connect error:", error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (connectedDevice && message) {
+      try {
+        await connectedDevice.write(message + '\n');
+        setChatMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: 'You', text: message },
+        ]);
+        setMessage('');
+      } catch (error) {
+        console.error("Send message error:", error);
+      }
+    }
+  };
+
+  const renderItem = ({ item }: { item: { sender: string, text: string } }) => (
+    <View>
+      <Text style={{ color: "white" }}>
+        {item.sender}: {item.text}
+      </Text>
+    </View>
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <SafeAreaView style={{ flex: 1, padding: 20 }}>
+      <Text style={{ color: "white", marginTop: 20 }}>
+        React native Test App
+      </Text>
+      <Button title="Scan for Devices" onPress={scanForDevices} />
+      <FlatList
+        data={chatMessages}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => index.toString()}
+      />
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TextInput
+          value={message}
+          onChangeText={setMessage}
+          style={{
+            flex: 1,
+            borderColor: 'gray',
+            borderWidth: 1,
+            marginRight: 10,
+            color: "white"
+          }}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <Button title="Send" onPress={sendMessage} />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -68,3 +141,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
 });
+
+export default HomeScreen;
