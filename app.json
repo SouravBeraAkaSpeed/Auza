@@ -21,11 +21,12 @@
     },
     "android": {
       "permissions": [
-        "ACCESS_FINE_LOCATION",
+        
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",
         "BLUETOOTH_SCAN",
-        "BLUETOOTH_CONNECT"
+        "BLUETOOTH_CONNECT",
+        "ACCESS_FINE_LOCATION"
       ],
       "package": "com.toillabs.auza",
       "adaptiveIcon": {

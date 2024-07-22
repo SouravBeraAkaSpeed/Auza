@@ -10,17 +10,23 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import BluetoothClassic, { BluetoothDeviceReadEvent, BluetoothEventListener } from 'react-native-bluetooth-classic';
+import BluetoothClassic, { BluetoothDevice, BluetoothDeviceReadEvent } from 'react-native-bluetooth-classic';
 
 const requestBluetoothPermissions = async () => {
   if (Platform.OS === 'ios') {
     return true;
   }
   if (Platform.OS === 'android') {
-    const granted = await PermissionsAndroid.request(
+    const granted_bluetooth_scan = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN
     );
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
+
+    const granted_bluetooth_connect = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
+    );
+
+   
+    return (granted_bluetooth_scan === PermissionsAndroid.RESULTS.GRANTED && granted_bluetooth_connect === PermissionsAndroid.RESULTS.GRANTED);
   }
   return false;
 };
@@ -29,11 +35,13 @@ const HomeScreen = () => {
   const [message, setMessage] = useState<string>('');
   const [chatMessages, setChatMessages] = useState<{ sender: string, text: string }[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<any>(null);
-  const [deviceList, setDeviceList] = useState<any[]>([]);
+  const [deviceList, setDeviceList] = useState<BluetoothDevice[]>([]);
+  const [devicesAvailable, setDevicesAvailable] = useState<{ name: string, address: string }[]>([])
 
   useEffect(() => {
     requestBluetoothPermissions().then((granted) => {
       if (granted) {
+
         scanForDevices();
       }
     });
@@ -51,12 +59,19 @@ const HomeScreen = () => {
       const devices = await BluetoothClassic.getBondedDevices();
       setDeviceList(devices);
 
+      setDevicesAvailable(() => devices.map((device) => {
+        return {
+          name: device.name, address: device.address
+        }
+      }))
+
+
       const device = devices.find(d => d.name === 'ESP32Test');
       if (device) {
         const deviceInstance = await BluetoothClassic.connectToDevice(device.address);
         setConnectedDevice(deviceInstance);
 
-        deviceInstance.onDataReceived((data : BluetoothDeviceReadEvent) => {
+        deviceInstance.onDataReceived((data: BluetoothDeviceReadEvent) => {
           const receivedMessage = data.data;
           setChatMessages((prevMessages) => [
             ...prevMessages,
@@ -94,17 +109,48 @@ const HomeScreen = () => {
     </View>
   );
 
+  const renderdevices = ({ item }: { item: { name: string, address: string } }) => (
+    <View>
+      <Text style={{ color: "white", paddingTop: 10 }}>
+        {item.name}  , Uuid :  {item.address} {item.name === connectedDevice.name && "( CONNECTED )"}
+      </Text>
+    </View>
+  )
+
   return (
-    <SafeAreaView style={{ flex: 1, padding: 20 }}>
-      <Text style={{ color: "white", marginTop: 20 }}>
-        React native Test App
+    <SafeAreaView style={{ flex: 1, padding: 20, backgroundColor: "black" }}>
+      <Text style={{ color: "white", margin: "auto", marginVertical: 20 }}>
+        Auza Network Test App
       </Text>
       <Button title="Scan for Devices" onPress={scanForDevices} />
-      <FlatList
+      <Text style={{ color: "white", marginVertical: 20 }}>
+        Devices
+      </Text>
+
+
+      {devicesAvailable.length > 0 ? <FlatList
+        data={devicesAvailable}
+        renderItem={renderdevices}
+        keyExtractor={(item, index) => index.toString()}
+        style={{ maxHeight: 110 }}
+        showsVerticalScrollIndicator={true}
+      /> : <Text style={{ color: "gray", margin: "auto", marginVertical: 20 }}>
+        No Device available
+      </Text>}
+
+      <Text style={{ color: "white", marginVertical: 20 }}>
+        Messages
+      </Text>
+
+      {chatMessages.length > 0 ? <FlatList
         data={chatMessages}
         renderItem={renderItem}
         keyExtractor={(item, index) => index.toString()}
-      />
+
+      /> : <Text style={{ color: "gray", margin: "auto", marginVertical: 20 }}>
+        No Message available
+      </Text>}
+
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <TextInput
           value={message}
@@ -114,7 +160,8 @@ const HomeScreen = () => {
             borderColor: 'gray',
             borderWidth: 1,
             marginRight: 10,
-            color: "white"
+            color: "white",
+            padding: 10
           }}
         />
         <Button title="Send" onPress={sendMessage} />
