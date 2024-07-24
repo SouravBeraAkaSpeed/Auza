@@ -14,6 +14,16 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
       }}>
+
+      <Tabs.Screen
+        name="intro"
+        options={{
+          title: 'Intro',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'trail-sign' : 'trail-sign-outline'} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="index"
         options={{
@@ -23,15 +33,48 @@ export default function TabLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
-        name="explore"
+        name="ai"
         options={{
-          title: 'Explore',
+          title: 'Ai',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
+            <TabBarIcon name={focused ? 'chatbox-ellipses' : 'chatbox-ellipses-outline'} color={color} />
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Contact',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'people' : 'people-outline'} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="live"
+        options={{
+          title: 'Live',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'images-sharp' : 'images-sharp'} color={color} />
+          ),
+        }}
+      />
+
+
+      {/* <Tabs.Screen
+        name="test"
+        options={{
+          title: 'Test Env',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'settings' : 'settings-outline'} color={color} />
+          ),
+        }}
+      /> */}
+
     </Tabs>
   );
 }

@@ -1,192 +1,213 @@
-import React, { useState, useEffect } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TextInput,
-  Button,
-  FlatList,
-  PermissionsAndroid,
-  Platform,
-  StyleSheet,
-} from 'react-native';
-import BluetoothClassic, { BluetoothDevice, BluetoothDeviceReadEvent } from 'react-native-bluetooth-classic';
+import React from 'react';
+import { View, Image, StyleSheet, FlatList, Dimensions, Text, TouchableOpacity } from 'react-native';
+import { useFonts } from 'expo-font';
+import { ParamListBase, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-const requestBluetoothPermissions = async () => {
-  if (Platform.OS === 'ios') {
-    return true;
-  }
-  if (Platform.OS === 'android') {
-    const granted_bluetooth_scan = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN
-    );
+const { width } = Dimensions.get('window');
 
-    const granted_bluetooth_connect = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
-    );
+const HomePage = () => {
+    const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
 
-   
-    return (granted_bluetooth_scan === PermissionsAndroid.RESULTS.GRANTED && granted_bluetooth_connect === PermissionsAndroid.RESULTS.GRANTED);
-  }
-  return false;
-};
-
-const HomeScreen = () => {
-  const [message, setMessage] = useState<string>('');
-  const [chatMessages, setChatMessages] = useState<{ sender: string, text: string }[]>([]);
-  const [connectedDevice, setConnectedDevice] = useState<any>(null);
-  const [deviceList, setDeviceList] = useState<BluetoothDevice[]>([]);
-  const [devicesAvailable, setDevicesAvailable] = useState<{ name: string, address: string }[]>([])
-
-  useEffect(() => {
-    requestBluetoothPermissions().then((granted) => {
-      if (granted) {
-
-        scanForDevices();
-      }
+    const [fontsLoaded] = useFonts({
+        'WorkSans-VariableFont_wght': require('@/assets/fonts/Work_Sans/WorkSans-VariableFont_wght.ttf'),
     });
 
-    // Cleanup on unmount
-    return () => {
-      if (connectedDevice) {
-        connectedDevice.disconnect();
-      }
-    };
-  }, []);
+    if (!fontsLoaded) {
+        return null; // or a loading screen
+    }
 
-  const scanForDevices = async () => {
-    try {
-      const devices = await BluetoothClassic.getBondedDevices();
-      setDeviceList(devices);
+    const feedData = [
+        {
+            id: '1',
+            imageSource: require('@/assets/Disasters/india floods 2024.jpg'),
+            username: 'India Floods 2024',
+            caption: 'The flood affected a portion of the State from 2nd July to 3rd July 2024, with major areas affected including Imphal West, Imphal East, Thoubal, Kangpokpi, Bishnupur, and Senapati. In the hill districts, minor landslides have occurred in various locations, destroying crops and infrastructure due to heavy rainfall.',
+        },
+        {
+            id: '2',
+            imageSource: require('@/assets/Disasters/india floods 2023.png'),
+            username: 'India Floods 2023',
+            caption: 'What happened, where and when? Heavy downpours plagued Himachal Pradesh and Uttarakhand in late August 2023. These intense bursts of rain, known as cloudbursts, unleashed massive amounts of water in a short period, triggering devastating floods.',
+        },
+        // Add more items as needed
+    ];
 
-      setDevicesAvailable(() => devices.map((device) => {
-        return {
-          name: device.name, address: device.address
+    const renderFeedItem = ({ item }: {
+        item: {
+            id: string;
+            imageSource: any;
+            username: string;
+            caption: string;
         }
-      }))
+    }) => (
+        <View style={styles.feedItem}>
+            <View style={styles.postHeader}>
+                <TouchableOpacity onPress={() => navigation.navigate('UserProfile')}>
+                    <Image
+                        source={require('@/assets/logoaiblack.png')}
+                        style={styles.profilePic}
+                    />
+                </TouchableOpacity>
+                <Text style={styles.username}>auza</Text>
+            </View>
+            <Image
+                source={item.imageSource}
+                style={styles.feedImage}
+                resizeMode="cover"
+            />
+            <View style={styles.postFooter}></View>
+            <Text style={styles.caption}>
+                <Text style={styles.username}>{item.username}</Text> {item.caption}
+            </Text>
+        </View>
+    );
 
-
-      const device = devices.find(d => d.name === 'ESP32Test');
-      if (device) {
-        const deviceInstance = await BluetoothClassic.connectToDevice(device.address);
-        setConnectedDevice(deviceInstance);
-
-        deviceInstance.onDataReceived((data: BluetoothDeviceReadEvent) => {
-          const receivedMessage = data.data;
-          setChatMessages((prevMessages) => [
-            ...prevMessages,
-            { sender: 'ESP32', text: receivedMessage },
-          ]);
-        });
-
-        console.log("Connected to device:", device.name);
-      }
-    } catch (error) {
-      console.error("Scan or connect error:", error);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (connectedDevice && message) {
-      try {
-        await connectedDevice.write(message + '\n');
-        setChatMessages((prevMessages) => [
-          ...prevMessages,
-          { sender: 'You', text: message },
-        ]);
-        setMessage('');
-      } catch (error) {
-        console.error("Send message error:", error);
-      }
-    }
-  };
-
-  const renderItem = ({ item }: { item: { sender: string, text: string } }) => (
-    <View>
-      <Text style={{ color: "white" }}>
-        {item.sender}: {item.text}
-      </Text>
-    </View>
-  );
-
-  const renderdevices = ({ item }: { item: { name: string, address: string } }) => (
-    <View>
-      <Text style={{ color: "white", paddingTop: 10 }}>
-        {item.name}  , Uuid :  {item.address} {item.name === connectedDevice.name && "( CONNECTED )"}
-      </Text>
-    </View>
-  )
-
-  return (
-    <SafeAreaView style={{ flex: 1, padding: 20, backgroundColor: "black" }}>
-      <Text style={{ color: "white", margin: "auto", marginVertical: 20 }}>
-        Auza Network Test App
-      </Text>
-      <Button title="Scan for Devices" onPress={scanForDevices} />
-      <Text style={{ color: "white", marginVertical: 20 }}>
-        Devices
-      </Text>
-
-
-      {devicesAvailable.length > 0 ? <FlatList
-        data={devicesAvailable}
-        renderItem={renderdevices}
-        keyExtractor={(item, index) => index.toString()}
-        style={{ maxHeight: 110 }}
-        showsVerticalScrollIndicator={true}
-      /> : <Text style={{ color: "gray", margin: "auto", marginVertical: 20 }}>
-        No Device available
-      </Text>}
-
-      <Text style={{ color: "white", marginVertical: 20 }}>
-        Messages
-      </Text>
-
-      {chatMessages.length > 0 ? <FlatList
-        data={chatMessages}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-
-      /> : <Text style={{ color: "gray", margin: "auto", marginVertical: 20 }}>
-        No Message available
-      </Text>}
-
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <TextInput
-          value={message}
-          onChangeText={setMessage}
-          style={{
-            flex: 1,
-            borderColor: 'gray',
-            borderWidth: 1,
-            marginRight: 10,
-            color: "white",
-            padding: 10
-          }}
-        />
-        <Button title="Send" onPress={sendMessage} />
-      </View>
-    </SafeAreaView>
-  );
-}
+    return (
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <Image
+                    source={require('@/assets/logonew.jpg')}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
+                <TouchableOpacity onPress={() => navigation.navigate('profile')}>
+                    <Image
+                        source={require('@/assets/profilepic.jpeg')}
+                        style={styles.userProfileIcon}
+                    />
+                </TouchableOpacity>
+            </View>
+            <FlatList
+                data={feedData}
+                renderItem={renderFeedItem}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+            />
+            <TouchableOpacity
+                onPress={() => navigation.navigate('ai')}
+                style={styles.aiButton}>
+                <Image
+                    source={require('@/assets/logoaiblack.png')}
+                    style={styles.logoai}
+                    resizeMode="cover"
+                />
+            </TouchableOpacity>
+        </View>
+    );
+};
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: 'black',
+        paddingTop: 20,
+    },
+    header: {
+        paddingVertical: 10,
+        borderBottomLeftRadius: 25,
+        borderRadius: 25,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 10,
+    },
+    AuzaText: {
+        fontSize: 40,
+        fontFamily: 'WorkSans-VariableFont_wght',
+        fontWeight: '900',
+        color: 'white',
+        marginLeft: 15,
+        marginBottom: 5,
+        marginTop: 10,
+    },
+    logo: {
+        top: 5,
+        width: 100,
+        height: 50,
+        left: 5,
+    },
+    userProfileIcon: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+    },
+    welcomeText: {
+        fontSize: 32,
+        fontFamily: 'WorkSans-VariableFont_wght',
+        fontWeight: '100',
+        color: 'white',
+        marginLeft: 15,
+        marginBottom: 5,
+        marginTop: 10,
+    },
+    descriptionText: {
+        fontSize: 16,
+        color: '#999',
+        marginLeft: 15,
+        marginBottom: 20,
+    },
+    feedItem: {
+        marginBottom: 20,
+    },
+    logoai: {
+        height: 60,
+        width: 60,
+        borderRadius: 50,
+    },
+    postHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10,
+    },
+    profilePic: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        marginRight: 10,
+    },
+    username: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    feedImage: {
+        width: width,
+        height: width,
+    },
+    postFooter: {
+        flexDirection: 'row',
+        padding: 10,
+    },
+    likes: {
+        color: 'white',
+        fontWeight: 'bold',
+        marginLeft: 10,
+    },
+    caption: {
+        color: 'white',
+        marginLeft: 10,
+        marginRight: 10,
+        marginTop: 5,
+    },
+    aiButton: {
+        position: 'absolute',
+        right: 20,
+        bottom: 20,
+        width: 70,
+        height: 70,
+        borderRadius: 50,
+        backgroundColor: 'black',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 8, // for Android shadow
+        shadowColor: "#000", // for iOS shadow
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.30,
+        shadowRadius: 4.65,
+    },
 });
 
-export default HomeScreen;
+export default HomePage;
