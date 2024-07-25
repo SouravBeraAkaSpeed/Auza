@@ -100,7 +100,7 @@ const HomeScreen = () => {
           const messageText = Buffer.from(receivedMessage, 'base64').toString('ascii');
           setChatMessages((prevMessages) => [
             ...prevMessages,
-            { sender: 'ESP32', text: messageText },
+            { sender: 'ESP32', text: messageText.replace("Broadcast:", "") },
           ]);
         }
       });
