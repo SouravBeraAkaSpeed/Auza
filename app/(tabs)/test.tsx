@@ -76,7 +76,7 @@ const HomeScreen = () => {
         }))
 
 
-        const device = devices.find(d => d?.name === 'ESP32Test');
+        const device = devices.find(d => d?.name === 'auza-transmitter');
         if (device) {
           const deviceInstance = await BluetoothClassic.connectToDevice(device.address);
           setConnectedDevice(deviceInstance);

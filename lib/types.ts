@@ -10,7 +10,7 @@ export interface NewsFeedItem {
 
 export interface MessageType {
   id: string;
-  sender: "user" | "bot";
+  sender: "user" | "assistant";
   text: string;
   timestamp: Date;
 }
