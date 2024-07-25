@@ -36,7 +36,7 @@ const BotPage = () => {
 
     try {
       const response = await axios.post("http://localhost:3002/api/neura", {
-        model: "llava:latest",
+        model: "NeuraAiTextMode:latest",
         message: [
           {
             role: "user",
